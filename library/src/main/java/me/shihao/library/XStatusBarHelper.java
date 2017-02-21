@@ -70,7 +70,7 @@ public class XStatusBarHelper {
     /**
      * Android4.4以上的沉浸式全屏模式
      * <p>
-     * * 注:
+     * 注:
      * 1.删除fitsSystemWindows属性:Android5.0以上使用该方法如果出现界面展示不正确,删除布局中所有fitsSystemWindows属性
      * 或者调用forceFitsSystemWindows方法
      * 2.不删除fitsSystemWindows属性:也可以区别处理,Android5.0以上使用自己的方式实现,不调用该方法
