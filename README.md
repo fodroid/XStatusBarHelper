@@ -1,6 +1,6 @@
 # XStatusBarHelper
 沉浸式状态栏工具类
-
+![效果图](https://github.com/fodroid/XStatusBarHelper/blob/master/capture/device-2017-02-21-224549545.png)
 
 #Usage 使用
 
