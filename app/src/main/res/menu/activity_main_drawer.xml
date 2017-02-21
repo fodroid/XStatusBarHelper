@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:title="实际效果">
+        <menu>
+            <item
+                android:id="@+id/nav_one"
+                android:icon="@drawable/ic_menu_share"
+                android:title="效果一：方式A"/>
+            <item
+                android:id="@+id/nav_two"
+                android:icon="@drawable/ic_menu_send"
+                android:title="效果一：方式B"/>
+            <item
+                android:id="@+id/nav_three"
+                android:icon="@drawable/ic_menu_send"
+                android:title="效果二"/>
+        </menu>
+    </item>
+
+    <item android:title="Communicate">
+        <menu>
+            <item
+                android:id="@+id/nav_share"
+                android:icon="@drawable/ic_menu_share"
+                android:title="Share"/>
+            <item
+                android:id="@+id/nav_send"
+                android:icon="@drawable/ic_menu_send"
+                android:title="Send"/>
+        </menu>
+    </item>
+
+</menu>

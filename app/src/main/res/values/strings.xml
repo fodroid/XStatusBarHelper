@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">XStatusBarHelper</string>
+    <string name="title_activity_main">MainActivity</string>
+    <string name="title_activity_one">效果一：方式A</string>
+    <string name="title_activity_one_b">效果一：方式B</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <string name="action_settings">Settings</string>
 </resources>

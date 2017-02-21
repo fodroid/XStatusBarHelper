@@ -24,13 +24,110 @@ import java.util.regex.Pattern;
  */
 
 public class XStatusBarHelper {
-    private static float DEFAULT_ALPHA = /*Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP ? 0.2f :*/ 0.2f;
+
+    private static float DEFAULT_ALPHA = 0.2f;
+
+    /**
+     * 设置默认值
+     *
+     * @param alpha
+     */
+    public static void setDefaultAlpha(@FloatRange(from = 0.0, to = 1.0) float alpha) {
+        DEFAULT_ALPHA = alpha;
+    }
+
+    /**
+     * Android4.4以上的沉浸式全屏模式
+     *
+     * @param activity Activity对象
+     * @see {@link #immersiveStatusBar(Window, float)}
+     */
+    public static void immersiveStatusBar(Activity activity) {
+        immersiveStatusBar(activity, DEFAULT_ALPHA);
+    }
+
+    /**
+     * Android4.4以上的沉浸式全屏模式
+     *
+     * @param activity Activity对象
+     * @param alpha    透明栏透明度[0.0-1.0]
+     * @see {@link #immersiveStatusBar(Window, float)}
+     */
+    public static void immersiveStatusBar(Activity activity, @FloatRange(from = 0.0, to = 1.0) float alpha) {
+        immersiveStatusBar(activity.getWindow(), alpha);
+    }
+
+    /**
+     * Android4.4以上的沉浸式全屏模式
+     *
+     * @param window 一般都是用于Activity的window,也可以是其他的例如Dialog,DialogFragment
+     * @see {@link #immersiveStatusBar(Window, float)}
+     */
+    public static void immersiveStatusBar(Window window) {
+        immersiveStatusBar(window, DEFAULT_ALPHA);
+    }
+
+    /**
+     * Android4.4以上的沉浸式全屏模式
+     * <p>
+     * * 注:
+     * 1.删除fitsSystemWindows属性:Android5.0以上使用该方法如果出现界面展示不正确,删除布局中所有fitsSystemWindows属性
+     * 或者调用forceFitsSystemWindows方法
+     * 2.不删除fitsSystemWindows属性:也可以区别处理,Android5.0以上使用自己的方式实现,不调用该方法
+     *
+     * @param window 一般都是用于Activity的window,也可以是其他的例如Dialog,DialogFragment
+     * @param alpha  透明栏透明度[0.0-1.0]
+     */
+    public static void immersiveStatusBar(Window window, @FloatRange(from = 0.0, to = 1.0) float alpha) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            window.setStatusBarColor(Color.TRANSPARENT);
+
+            int systemUiVisibility = window.getDecorView().getSystemUiVisibility();
+            systemUiVisibility |= View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+            systemUiVisibility |= View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
+            window.getDecorView().setSystemUiVisibility(systemUiVisibility);
+        } else {
+            window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        }
+
+        ViewGroup decorView = (ViewGroup) window.getDecorView();
+        ViewGroup contentView = (ViewGroup) window.getDecorView().findViewById(Window.ID_ANDROID_CONTENT);
+        View rootView = contentView.getChildAt(0);
+        int statusBarHeight = getStatusBarHeight(window.getContext());
+        if (rootView != null) {
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) rootView.getLayoutParams();
+            ViewCompat.setFitsSystemWindows(rootView, true);
+            lp.topMargin = -statusBarHeight;
+            rootView.setLayoutParams(lp);
+        }
+
+        setTranslucentView(decorView, alpha);
+    }
+
+    /**
+     * 获取状态栏高度
+     */
+    public static int getStatusBarHeight(Context context) {
+        int result = 0;
+        int resId = context.getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resId > 0) {
+            result = context.getResources().getDimensionPixelSize(resId);
+        }
+        return result;
+    }
 
     /**
      * Android4.4以上的状态栏着色
      *
      * @param activity       Activity对象
      * @param statusBarColor 状态栏颜色
+     * @see {@link #tintStatusBar(Window, int, float)}
      */
     public static void tintStatusBar(Activity activity, @ColorInt int statusBarColor) {
         tintStatusBar(activity, statusBarColor, DEFAULT_ALPHA);
@@ -42,6 +139,7 @@ public class XStatusBarHelper {
      * @param activity       Activity对象
      * @param statusBarColor 状态栏颜色
      * @param alpha          透明栏透明度[0.0-1.0]
+     * @see {@link #tintStatusBar(Window, int, float)}
      */
     public static void tintStatusBar(Activity activity, @ColorInt int statusBarColor, @FloatRange(from = 0.0, to = 1.0)
             float alpha) {
@@ -53,6 +151,7 @@ public class XStatusBarHelper {
      *
      * @param window         一般都是用于Activity的window,也可以是其他的例如Dialog,DialogFragment
      * @param statusBarColor 状态栏颜色
+     * @see {@link #tintStatusBar(Window, int, float)}
      */
     public static void tintStatusBar(Window window, @ColorInt int statusBarColor) {
         tintStatusBar(window, statusBarColor, DEFAULT_ALPHA);
@@ -88,19 +187,17 @@ public class XStatusBarHelper {
         }
         //设置一个状态栏
         setStatusBar(decorView, statusBarColor, true);
-        //设置一个半透明效果
+        //设置一个半透明效果，Material Design的效果
         setTranslucentView(decorView, alpha);
     }
 
     /**
      * Android4.4以上的状态栏着色(针对于DrawerLayout)
-     * 注:
-     * 1.如果出现界面展示不正确,删除布局中所有fitsSystemWindows属性,尤其是DrawerLayout的fitsSystemWindows属性
-     * 2.可以版本判断在5.0以上不调用该方法,使用系统自带
      *
      * @param activity       Activity对象
      * @param drawerLayout   DrawerLayout对象
      * @param statusBarColor 状态栏颜色
+     * @see {@link #tintStatusBarForDrawer(Activity, DrawerLayout, int, float)}
      */
     public static void tintStatusBarForDrawer(Activity activity, DrawerLayout drawerLayout, @ColorInt int
             statusBarColor) {
@@ -153,175 +250,6 @@ public class XStatusBarHelper {
     }
 
     /**
-     * Android4.4以上的沉浸式全屏模式
-     * 注:
-     * 1.删除fitsSystemWindows属性:Android5.0以上使用该方法如果出现界面展示不正确,删除布局中所有fitsSystemWindows属性
-     * 或者调用forceFitsSystemWindows方法
-     * 2.不删除fitsSystemWindows属性:也可以区别处理,Android5.0以上使用自己的方式实现,不调用该方法
-     *
-     * @param activity Activity对象
-     */
-    public static void immersiveStatusBar(Activity activity) {
-        immersiveStatusBar(activity, DEFAULT_ALPHA);
-    }
-
-    /**
-     * Android4.4以上的沉浸式全屏模式
-     * 注:
-     * 1.删除fitsSystemWindows属性:Android5.0以上使用该方法如果出现界面展示不正确,删除布局中所有fitsSystemWindows属性
-     * 或者调用forceFitsSystemWindows方法
-     * 2.不删除fitsSystemWindows属性:也可以区别处理,Android5.0以上使用自己的方式实现,不调用该方法
-     *
-     * @param activity Activity对象
-     * @param alpha    透明栏透明度[0.0-1.0]
-     */
-    public static void immersiveStatusBar(Activity activity, @FloatRange(from = 0.0, to = 1.0) float alpha) {
-        immersiveStatusBar(activity.getWindow(), alpha);
-    }
-
-    /**
-     * Android4.4以上的沉浸式全屏模式
-     * 注:
-     * 1.删除fitsSystemWindows属性:Android5.0以上使用该方法如果出现界面展示不正确,删除布局中所有fitsSystemWindows属性
-     * 或者调用forceFitsSystemWindows方法
-     * 2.不删除fitsSystemWindows属性:也可以区别处理,Android5.0以上使用自己的方式实现,不调用该方法
-     *
-     * @param window 一般都是用于Activity的window,也可以是其他的例如Dialog,DialogFragment
-     */
-    public static void immersiveStatusBar(Window window) {
-        immersiveStatusBar(window, DEFAULT_ALPHA);
-    }
-
-    /**
-     * Android4.4以上的沉浸式全屏模式
-     * 注:
-     * 1.删除fitsSystemWindows属性:Android5.0以上使用该方法如果出现界面展示不正确,删除布局中所有fitsSystemWindows属性
-     * 或者调用forceFitsSystemWindows方法
-     * 2.不删除fitsSystemWindows属性:也可以区别处理,Android5.0以上使用自己的方式实现,不调用该方法
-     *
-     * @param window 一般都是用于Activity的window,也可以是其他的例如Dialog,DialogFragment
-     * @param alpha  透明栏透明度[0.0-1.0]
-     */
-    public static void immersiveStatusBar(Window window, @FloatRange(from = 0.0, to = 1.0) float alpha) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
-            return;
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            window.setStatusBarColor(Color.TRANSPARENT);
-
-            int systemUiVisibility = window.getDecorView().getSystemUiVisibility();
-            systemUiVisibility |= View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
-            systemUiVisibility |= View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
-            window.getDecorView().setSystemUiVisibility(systemUiVisibility);
-        } else {
-            window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-        }
-
-        ViewGroup decorView = (ViewGroup) window.getDecorView();
-        ViewGroup contentView = (ViewGroup) window.getDecorView().findViewById(Window.ID_ANDROID_CONTENT);
-        View rootView = contentView.getChildAt(0);
-        int statusBarHeight = getStatusBarHeight(window.getContext());
-        if (rootView != null) {
-            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) rootView.getLayoutParams();
-            ViewCompat.setFitsSystemWindows(rootView, true);
-            lp.topMargin = -statusBarHeight;
-            rootView.setLayoutParams(lp);
-        }
-
-        setTranslucentView(decorView, alpha);
-    }
-
-    /**
-     * 设置状态栏darkMode,字体颜色及icon变黑(目前支持MIUI6以上,Flyme4以上,Android M以上)
-     */
-    public static void setStatusBarDarkMode(Activity activity) {
-        setStatusBarDarkMode(activity.getWindow());
-    }
-
-    /**
-     * 设置状态栏darkMode,字体颜色及icon变黑(目前支持MIUI6以上,Flyme4以上,Android M以上)
-     */
-    public static void setStatusBarDarkMode(Window window) {
-        if (isFlyme4Later()) {
-            setStatusBarDarkModeForFlyme4(window, true);
-        } else if (isMIUI6Later()) {
-            setStatusBarDarkModeForMIUI6(window, true);
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            setStatusBarDarkModeForM(window);
-        }
-    }
-
-
-    //------------------------->
-
-    /**
-     * android 6.0设置字体颜色
-     */
-    @TargetApi(Build.VERSION_CODES.M)
-    public static void setStatusBarDarkModeForM(Window window) {
-        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        window.setStatusBarColor(Color.TRANSPARENT);
-
-        int systemUiVisibility = window.getDecorView().getSystemUiVisibility();
-        systemUiVisibility |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-        window.getDecorView().setSystemUiVisibility(systemUiVisibility);
-    }
-
-    /**
-     * 设置Flyme4+的darkMode,darkMode时候字体颜色及icon变黑
-     * http://open-wiki.flyme.cn/index.php?title=Flyme%E7%B3%BB%E7%BB%9FAPI
-     */
-    public static boolean setStatusBarDarkModeForFlyme4(Window window, boolean dark) {
-        boolean result = false;
-        if (window != null) {
-            try {
-                WindowManager.LayoutParams e = window.getAttributes();
-                Field darkFlag = WindowManager.LayoutParams.class.getDeclaredField("MEIZU_FLAG_DARK_STATUS_BAR_ICON");
-                Field meizuFlags = WindowManager.LayoutParams.class.getDeclaredField("meizuFlags");
-                darkFlag.setAccessible(true);
-                meizuFlags.setAccessible(true);
-                int bit = darkFlag.getInt(null);
-                int value = meizuFlags.getInt(e);
-                if (dark) {
-                    value |= bit;
-                } else {
-                    value &= ~bit;
-                }
-
-                meizuFlags.setInt(e, value);
-                window.setAttributes(e);
-                result = true;
-            } catch (Exception var8) {
-                android.util.Log.e("StatusBar", "setStatusBarDarkIcon: failed");
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * 设置MIUI6+的状态栏是否为darkMode,darkMode时候字体颜色及icon变黑
-     * http://dev.xiaomi.com/doc/p=4769/
-     */
-    public static void setStatusBarDarkModeForMIUI6(Window window, boolean darkmode) {
-        Class<? extends Window> clazz = window.getClass();
-        try {
-            int darkModeFlag = 0;
-            Class<?> layoutParams = Class.forName("android.view.MiuiWindowManager$LayoutParams");
-            Field field = layoutParams.getField("EXTRA_FLAG_STATUS_BAR_DARK_MODE");
-            darkModeFlag = field.getInt(layoutParams);
-            Method extraFlagField = clazz.getMethod("setExtraFlags", int.class, int.class);
-            extraFlagField.invoke(window, darkmode ? darkModeFlag : 0, darkModeFlag);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
      * 创建假的状态栏View
      */
     private static void setStatusBar(ViewGroup container, @ColorInt int statusBarColor, boolean visible, boolean
@@ -353,7 +281,7 @@ public class XStatusBarHelper {
     }
 
     /**
-     * 创建假的透明栏
+     * 创建透明状态栏，实现Material Design的效果
      */
     private static void setTranslucentView(ViewGroup container,
                                            @FloatRange(from = 0.0, to = 1.0) float alpha) {
@@ -371,21 +299,133 @@ public class XStatusBarHelper {
         }
     }
 
+    /**
+     * 增加View的高度以及paddingTop,增加的值为状态栏高度
+     *
+     * @param context
+     * @param view    一般沉浸式全屏模式下用于Toolbar或者自定义的标题栏
+     */
+    public static void setHeightAndPadding(Context context, View view) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            ViewGroup.LayoutParams lp = view.getLayoutParams();
+            lp.height += getStatusBarHeight(context);//增高
+            view.setPadding(view.getPaddingLeft(), view.getPaddingTop() + getStatusBarHeight(context),
+                    view.getPaddingRight(), view.getPaddingBottom());
+        }
+    }
 
     /**
-     * 获取状态栏高度
+     * 增加View的paddingTop,增加的值为状态栏高度
+     *
+     * @param context
+     * @param view    一般沉浸式全屏模式下用于Toolbar或者自定义的标题栏
      */
-    public static int getStatusBarHeight(Context context) {
-        int result = 0;
-        int resId = context.getResources().getIdentifier("status_bar_height", "dimen", "android");
-        if (resId > 0) {
-            result = context.getResources().getDimensionPixelSize(resId);
+    public static void setPadding(Context context, View view) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            view.setPadding(view.getPaddingLeft(), view.getPaddingTop() + getStatusBarHeight(context),
+                    view.getPaddingRight(), view.getPaddingBottom());
         }
+    }
+
+    /**
+     * 设置view的高度，最终高度为view加上状态栏高度
+     *
+     * @param context
+     * @param view    一般沉浸式全屏模式下用于Toolbar或者自定义的标题栏
+     */
+    public static void setHeight(Context context, View view) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            ViewGroup.LayoutParams lp = view.getLayoutParams();
+            lp.height += getStatusBarHeight(context);//增高
+        }
+    }
+
+    /**
+     * 设置状态栏darkMode,字体颜色及icon变黑(目前支持MIUI6以上,Flyme4以上,Android M以上)
+     */
+    public static void setStatusBarDarkMode(Activity activity) {
+        setStatusBarDarkMode(activity.getWindow());
+    }
+
+    /**
+     * 设置状态栏为darkMode,字体颜色及icon变黑(目前支持MIUI6以上,Flyme4以上,Android M以上)
+     */
+    public static void setStatusBarDarkMode(Window window) {
+        if (isFlyme4Later()) {
+            setStatusBarDarkModeForFlyme4(window, true);
+        } else if (isMIUI6Later()) {
+            setStatusBarDarkModeForMIUI6(window, true);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            setStatusBarDarkModeForM(window);
+        }
+    }
+
+    /**
+     * android 6.0上设置字体颜色
+     */
+    @TargetApi(Build.VERSION_CODES.M)
+    public static void setStatusBarDarkModeForM(Window window) {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        window.setStatusBarColor(Color.TRANSPARENT);
+
+        int systemUiVisibility = window.getDecorView().getSystemUiVisibility();
+        systemUiVisibility |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        window.getDecorView().setSystemUiVisibility(systemUiVisibility);
+    }
+
+    /**
+     * 设置Flyme4+的状态栏是否为darkMode模式
+     * 来源：http://open-wiki.flyme.cn/index.php?title=Flyme%E7%B3%BB%E7%BB%9FAPI
+     */
+    public static boolean setStatusBarDarkModeForFlyme4(Window window, boolean dark) {
+        boolean result = false;
+        if (window != null) {
+            try {
+                WindowManager.LayoutParams e = window.getAttributes();
+                Field darkFlag = WindowManager.LayoutParams.class.getDeclaredField("MEIZU_FLAG_DARK_STATUS_BAR_ICON");
+                Field meizuFlags = WindowManager.LayoutParams.class.getDeclaredField("meizuFlags");
+                darkFlag.setAccessible(true);
+                meizuFlags.setAccessible(true);
+                int bit = darkFlag.getInt(null);
+                int value = meizuFlags.getInt(e);
+                if (dark) {
+                    value |= bit;
+                } else {
+                    value &= ~bit;
+                }
+
+                meizuFlags.setInt(e, value);
+                window.setAttributes(e);
+                result = true;
+            } catch (Exception var8) {
+                android.util.Log.e("StatusBar", "setStatusBarDarkIcon: failed");
+            }
+        }
+
         return result;
     }
 
     /**
-     * 判断是否Flyme4以上
+     * 设置MIUI6+的状态栏是否为darkMode
+     * 来源：http://dev.xiaomi.com/doc/p=4769/
+     */
+    public static void setStatusBarDarkModeForMIUI6(Window window, boolean darkmode) {
+        Class<? extends Window> clazz = window.getClass();
+        try {
+            int darkModeFlag = 0;
+            Class<?> layoutParams = Class.forName("android.view.MiuiWindowManager$LayoutParams");
+            Field field = layoutParams.getField("EXTRA_FLAG_STATUS_BAR_DARK_MODE");
+            darkModeFlag = field.getInt(layoutParams);
+            Method extraFlagField = clazz.getMethod("setExtraFlags", int.class, int.class);
+            extraFlagField.invoke(window, darkmode ? darkModeFlag : 0, darkModeFlag);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 判断系统是否Flyme4以上
      */
     public static boolean isFlyme4Later() {
         return Build.FINGERPRINT.contains("Flyme_OS_4")
@@ -394,7 +434,7 @@ public class XStatusBarHelper {
     }
 
     /**
-     * 判断是否为MIUI6以上
+     * 判断系统是否为MIUI6以上
      */
     public static boolean isMIUI6Later() {
         try {
@@ -410,43 +450,25 @@ public class XStatusBarHelper {
     }
 
     /**
-     * 增加View的高度以及paddingTop,增加的值为状态栏高度.一般是在沉浸式全屏给ToolBar用的
-     */
-    public static void setHeightAndPadding(Context context, View view) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            ViewGroup.LayoutParams lp = view.getLayoutParams();
-            lp.height += getStatusBarHeight(context);//增高
-            view.setPadding(view.getPaddingLeft(), view.getPaddingTop() + getStatusBarHeight(context),
-                    view.getPaddingRight(), view.getPaddingBottom());
-        }
-    }
-
-    /**
-     * 增加View的paddingTop,增加的值为状态栏高度
-     */
-    public static void setPadding(Context context, View view) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            view.setPadding(view.getPaddingLeft(), view.getPaddingTop() + getStatusBarHeight(context),
-                    view.getPaddingRight(), view.getPaddingBottom());
-        }
-    }
-
-    /**
-     * 强制rootView下面的子View的FitsSystemWindows为false
+     * 强制将Activity绑定的xml下面的子View的FitsSystemWindows为false
      */
     public static void forceFitsSystemWindows(Activity activity) {
         forceFitsSystemWindows(activity.getWindow());
     }
 
     /**
-     * 强制rootView下面的子View的FitsSystemWindows为false
+     * 强制将Window绑定的xml下面的子View的FitsSystemWindows为false
+     *
+     * @param window
      */
     public static void forceFitsSystemWindows(Window window) {
         forceFitsSystemWindows((ViewGroup) window.getDecorView().findViewById(Window.ID_ANDROID_CONTENT));
     }
 
     /**
-     * 强制rootView下面的子View的FitsSystemWindows为false
+     * 强制将ViewGroup下面的子View的FitsSystemWindows为false
+     *
+     * @param viewGroup
      */
     public static void forceFitsSystemWindows(ViewGroup viewGroup) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
