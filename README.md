@@ -56,3 +56,9 @@ Add the dependency
     XStatusBarHelper.setHeightAndPadding(this, toolbar);
 
 详细的调用方式，可以查看/app/src/main/java/me/shihao/xstatusbarhelper
+
+## 相关文章
+
+[如何实现沉浸式状态栏](http://www.jianshu.com/p/00fed1371bb0)
+
+#### 如果你觉得有用，请不吝star
