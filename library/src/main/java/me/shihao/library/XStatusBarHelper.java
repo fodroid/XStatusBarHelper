@@ -347,16 +347,32 @@ public class XStatusBarHelper {
         setStatusBarDarkMode(activity.getWindow());
     }
 
+    public static void setStatusBarDarkMode(Window window) {
+        setStatusBarDarkMode(window, true);
+    }
+
+    public static void setStatusBarLightMode(Activity activity) {
+        setStatusBarLightMode(activity.getWindow());
+    }
+
+    public static void setStatusBarLightMode(Window window) {
+        setStatusBarDarkMode(window, false);
+    }
+
+    public static void setStatusBarDarkMode(Activity activity, boolean dark) {
+        setStatusBarDarkMode(activity.getWindow(), dark);
+    }
+
     /**
      * 设置状态栏为darkMode,字体颜色及icon变黑(目前支持MIUI6以上,Flyme4以上,Android M以上)
      */
-    public static void setStatusBarDarkMode(Window window) {
+    public static void setStatusBarDarkMode(Window window, boolean dark) {
         if (isFlyme4Later()) {
-            setStatusBarDarkModeForFlyme4(window, true);
+            setStatusBarDarkModeForFlyme4(window, dark);
         } else if (isMIUI6Later()) {
-            setStatusBarDarkModeForMIUI6(window, true);
+            setStatusBarDarkModeForMIUI6(window, dark);
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            setStatusBarDarkModeForM(window);
+            setStatusBarDarkModeForM(window, dark);
         }
     }
 
@@ -364,13 +380,16 @@ public class XStatusBarHelper {
      * android 6.0上设置字体颜色
      */
     @TargetApi(Build.VERSION_CODES.M)
-    public static void setStatusBarDarkModeForM(Window window) {
+    public static void setStatusBarDarkModeForM(Window window, boolean dark) {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
         window.setStatusBarColor(Color.TRANSPARENT);
 
         int systemUiVisibility = window.getDecorView().getSystemUiVisibility();
-        systemUiVisibility |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        if (dark)
+            systemUiVisibility |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        else
+            systemUiVisibility &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
         window.getDecorView().setSystemUiVisibility(systemUiVisibility);
     }
 
